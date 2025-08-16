@@ -1,0 +1,13 @@
+runtime: nodejs20
+env: standard
+
+# Comando que o App Engine deve rodar ao subir a sua app:
+entrypoint: npm run start
+
+# (Opcional) Variáveis de ambiente
+env_variables:
+  NODE_ENV: 'production'
+# (Opcional) Escalonamento básico — 1 instância mínima para arranque mais rápido
+# automatic_scaling:
+#   min_instances: 0
+#   max_instances: 2
