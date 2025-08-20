@@ -12,6 +12,7 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+/examples
 
 # dotenv environment variable files
 .env

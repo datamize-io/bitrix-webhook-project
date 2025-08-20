@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BitrixLibService } from './bitrix-lib/bitrix-lib.service.js';
 import { ActivityService } from './activity/activity.service.js';
 import { ContactService } from './contact/contact.service.js';
+import { IndicacaoSpaService } from './indicacao-spa/indicacao-spa.service.js';
 
 @Injectable()
 export class AppService {
@@ -9,6 +10,7 @@ export class AppService {
     private readonly bitrixLibService: BitrixLibService,
     private readonly activityService: ActivityService,
     private readonly contactService: ContactService,
+    private readonly indicacaoSPAService: IndicacaoSpaService,
   ) {}
 
   async getHello(): Promise<string> {
@@ -18,9 +20,9 @@ export class AppService {
   async getExample(): Promise<string> {
     const testId = 121;
     this.filterWebhookEvent({
-      event: 'ONCALENDARENTRYADD',
+      event: 'ONCRMDEALADD',
       event_handler_id: '243',
-      data: { id: '869' },
+      data: { FIELDS: { ID: '9160', ENTITY_TYPE_ID: 1104 } },
       ts: '1755016010',
       auth: {
         domain: 'xxxxx.bitrix24.com.br',
@@ -38,5 +40,6 @@ export class AppService {
     console.log('Filtrando evento do webhook:', body);
     this.activityService.filter(body.event, body);
     this.contactService.filter(body.event, body);
+    this.indicacaoSPAService.filter(body.event, body);
   }
 }

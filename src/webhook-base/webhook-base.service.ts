@@ -1,13 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { BitrixLibService } from '../bitrix-lib/bitrix-lib.service.js';
+import { BitrixInstance } from '@datamize-io/bitrix-lib-node';
 
 @Injectable()
 export class WebhookBaseService {
+  protected instance: BitrixInstance;
   protected entityType: any;
   protected events: string[] = [];
 
   constructor(protected readonly bitrixLibService: BitrixLibService) {
     console.log('ActivityService initialized with events:', this.events);
+    this.instance = bitrixLibService.getInstance();
   }
 
   get entity() {

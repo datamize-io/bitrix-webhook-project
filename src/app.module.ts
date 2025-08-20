@@ -8,6 +8,8 @@ import { ActivityService } from './activity/activity.service.js';
 import { ContactService } from './contact/contact.service.js';
 import { WebhookBaseService } from './webhook-base/webhook-base.service.js';
 import { CalendarService } from './calendar/calendar.service.js';
+import { HelperModule } from './helper/helper.module.js';
+import { IndicacaoSpaService } from './indicacao-spa/indicacao-spa.service.js';
 
 @Module({
   imports: [
@@ -16,6 +18,7 @@ import { CalendarService } from './calendar/calendar.service.js';
       envFilePath: '.env', // caminho do arquivo de variáveis
     }),
     BitrixLibModule,
+    HelperModule,
   ],
   controllers: [AppController],
   providers: [
@@ -25,6 +28,7 @@ import { CalendarService } from './calendar/calendar.service.js';
     ContactService,
     WebhookBaseService,
     CalendarService,
+    IndicacaoSpaService,
   ],
 })
 export class AppModule {}

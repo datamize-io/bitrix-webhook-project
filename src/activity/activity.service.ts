@@ -34,6 +34,7 @@ export class ActivityService extends WebhookBaseService {
   }
 
   async ONCRMACTIVITYADD(data): Promise<void> {
+    return;
     const id = data.data.FIELDS.ID;
     try {
       this.entity.get(id).then(async (activity) => {
@@ -41,10 +42,10 @@ export class ActivityService extends WebhookBaseService {
         console.log('📨 Evento recebido em ONCRMACTIVITYADD:');
         console.log(`Provider: ${activityData.PROVIDER_ID}`);
 
-        if (activityData.PROVIDER_ID == 'FORM_SUBMIT') {
-          const form = ActivityFormProvider.setActivity(activity);
+        if (activityData.PROVIDER_ID == 'CRM_WEBFORM') {
+          const form = new ActivityFormProvider(activity.instance);
 
-          await form.moveToEntityOfSiteParameters();
+          await form.moveToEntityOfSiteParameters(activityData);
         }
 
         console.log(activityData.PROVIDER_ID);

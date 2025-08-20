@@ -6,7 +6,7 @@ import { Response } from 'express';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get()
+  @Get('test/')
   async getHello(): Promise<string> {
     return await this.appService.getHello();
   }
@@ -14,9 +14,8 @@ export class AppController {
   @Post('webhooks/')
   async webhookHandler(@Body() body: any, @Res() res: Response) {
     console.log('📨 Evento recebido em webhookhandler:', body);
+    return res.status(200).send({ ok: true });
 
     this.appService.filterWebhookEvent(body);
-
-    return res.status(200).send({ ok: true });
   }
 }
