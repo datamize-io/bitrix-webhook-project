@@ -1,0 +1,12 @@
+# NÃO herdar .gitignore (se tiver algo assim, comente):
+#!include:.gitignore
+
+# Excluir só o que não interessa
+.git/
+node_modules/
+
+# Forçar inclusão do que o App Engine precisa:
+!app.yaml
+!package.json
+!package-lock.json
+!dist/**

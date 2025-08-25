@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { BitrixLibService } from './bitrix-lib/bitrix-lib.service.js';
 import { ActivityService } from './activity/activity.service.js';
 import { ContactService } from './contact/contact.service.js';
-import { IndicacaoSpaService } from './indicacao-spa/indicacao-spa.service.js';
+import { LeadService } from './lead/lead.service.js';
+import { BitrixWebhookService } from './bitrix-webhook/bitrix-webhook.service.js';
 
 @Injectable()
 export class AppService {
   constructor(
-    private readonly bitrixLibService: BitrixLibService,
+    private readonly bitrixWebhook: BitrixWebhookService,
     private readonly activityService: ActivityService,
     private readonly contactService: ContactService,
-    private readonly indicacaoSPAService: IndicacaoSpaService,
+    private readonly leadService: LeadService,
   ) {}
 
   async getHello(): Promise<string> {
@@ -18,11 +18,10 @@ export class AppService {
   }
 
   async getExample(): Promise<string> {
-    const testId = 121;
     this.filterWebhookEvent({
-      event: 'ONCRMDEALADD',
+      event: 'ONCRMCONTACTADD',
       event_handler_id: '243',
-      data: { FIELDS: { ID: '9160', ENTITY_TYPE_ID: 1104 } },
+      data: { FIELDS: { ID: '7732', ENTITY_TYPE_ID: 1104 } },
       ts: '1755016010',
       auth: {
         domain: 'xxxxx.bitrix24.com.br',
@@ -33,13 +32,13 @@ export class AppService {
       },
     });
 
-    return `Testando ${testId}`;
+    return `Testando`;
   }
 
-  async filterWebhookEvent(body: any): Promise<void> {
-    console.log('Filtrando evento do webhook:', body);
-    this.activityService.filter(body.event, body);
-    this.contactService.filter(body.event, body);
-    this.indicacaoSPAService.filter(body.event, body);
+  async filterWebhookEvent(event: any): Promise<void> {
+    const services = [this.activityService, this.contactService, this.leadService];
+
+    const triggerEventServices = this.bitrixWebhook.filterServiceEvents(services, event);
+    await this.bitrixWebhook.processServiceEvents(triggerEventServices, event);
   }
 }

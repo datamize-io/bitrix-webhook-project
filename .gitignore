@@ -1,4 +1,5 @@
 # Nestjs specific
+.npmrc
 /dist
 /node_modules
 /build

@@ -11,11 +11,10 @@ export class AppController {
     return await this.appService.getHello();
   }
 
-  @Post('webhooks/')
+  @Post('datamize/webhooks/')
   async webhookHandler(@Body() body: any, @Res() res: Response) {
-    console.log('📨 Evento recebido em webhookhandler:', body);
-    return res.status(200).send({ ok: true });
+    await this.appService.filterWebhookEvent(body);
 
-    this.appService.filterWebhookEvent(body);
+    return res.status(200).send({ ok: true });
   }
 }
