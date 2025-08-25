@@ -1,11 +1,56 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail  # -E garante que o trap ERR funcione em funções/subshells
+
+# =========================
+# HANDLERS
+# =========================
+pause() {
+  # Só pausa se estiver em terminal interativo
+  if [[ -t 1 ]]; then
+    echo
+    read -r -p "Tecle ENTER para continuar..."
+  fi
+}
+
+on_error() {
+  local exit_code=$?
+  local line_no=${BASH_LINENO[0]:-?}
+  local cmd="${BASH_COMMAND:-?}"
+
+  echo
+  echo "❌ ERRO!"
+  echo "   • Código de saída: $exit_code"
+  echo "   • Linha: $line_no"
+  echo "   • Comando: $cmd"
+  echo
+  echo "Dica: rode novamente com '--verbosity=debug' onde aplicável para mais detalhes."
+  pause
+  exit "$exit_code"
+}
+
+on_exit() {
+  local exit_code=$?
+  if [[ $exit_code -eq 0 ]]; then
+    echo
+    echo "✅ Finalizado sem erros."
+  else
+    echo
+    echo "⚠️  Script terminou com erro (código $exit_code)."
+  fi
+  pause
+}
+
+trap on_error ERR
+trap on_exit EXIT
 
 # =========================
 # CONFIG
 # =========================
-export $(grep -v '^#' .env | xargs)
-PROJECT_ID=$GOOGLE_CLOUD_PROJECT
+read -rsp "Informe o valor para o ID do projeto: " _project
+PROJECT_ID="$_project"
+
+read -r -p "Tecle ENTER para iniciar a instalação do projeto $PROJECT_ID"
+gcloud config set project "$PROJECT_ID"
 
 # Região do App Engine (se precisar criar)
 APP_ENGINE_REGION="$(gcloud app describe --project "$PROJECT_ID" --format='value(locationId)' 2>/dev/null || echo southamerica-east1)"
@@ -29,10 +74,18 @@ echo "Cloud Build SA: $CB_SA"
 echo "Staging bucket: gs://$STAGING_BUCKET"
 echo
 
+echo
+echo ">>>>>> PASSO 4: Ajustando IAM do bucket de staging $STAGING_BUCKET..."
+gsutil iam ch "serviceAccount:${CB_SA}:roles/storage.objectAdmin"   "gs://${STAGING_BUCKET}"
+gsutil iam ch "serviceAccount:${APPSPOT_SA}:roles/storage.objectAdmin" "gs://${STAGING_BUCKET}"
+gsutil iam ch "serviceAccount:${CB_SA}:roles/storage.admin" "gs://${STAGING_BUCKET}"
+gsutil iam ch "serviceAccount:${APPSPOT_SA}:roles/storage.admin" "gs://${STAGING_BUCKET}"
+
+read -p "Tecla"
 # =========================
 # 0) Habilitar APIs (idempotente)
 # =========================
-echo "Habilitando APIs necessárias..."
+echo ">>>>>> CONFIG 1: Habilitando APIs necessárias..."
 gcloud services enable \
   appengine.googleapis.com \
   cloudbuild.googleapis.com \
@@ -44,17 +97,19 @@ gcloud services enable \
 # =========================
 # 1) Garantir App Engine app
 # =========================
+echo
 if ! gcloud app describe --project "$PROJECT_ID" >/dev/null 2>&1; then
-  echo "Criando App Engine em $APP_ENGINE_REGION..."
+  echo ">>>>>> PASSO 1: App Engine em $APP_ENGINE_REGION..."
   gcloud app create --project "$PROJECT_ID" --region="$APP_ENGINE_REGION"
 else
-  echo "App Engine já existe."
+  echo ">>>>>> PASSO 1: App Engine já existe."
 fi
 
 # =========================
 # 2) Garantir bucket de STAGING
 #    (gcloud usa 'staging.<project>.appspot.com')
 # =========================
+echo
 if ! gsutil ls -b "gs://${STAGING_BUCKET}" >/dev/null 2>&1; then
   AE_LOC="$(gcloud app describe --project "$PROJECT_ID" --format='value(locationId)')"
   case "$AE_LOC" in
@@ -64,10 +119,10 @@ if ! gsutil ls -b "gs://${STAGING_BUCKET}" >/dev/null 2>&1; then
     southamerica-east1)   BUCKET_LOC="southamerica-east1" ;;
     *)                    BUCKET_LOC="$AE_LOC" ;;
   esac
-  echo "Criando bucket de staging em $BUCKET_LOC..."
+  echo ">>>>>> PASSO 2: Criando bucket de staging em $BUCKET_LOC..."
   gsutil mb -p "$PROJECT_ID" -l "$BUCKET_LOC" -b on "gs://${STAGING_BUCKET}"
 else
-  echo "Bucket de staging já existe."
+  echo ">>>>>> PASSO 2: Bucket de staging já existe."
 fi
 
 # =========================
@@ -76,8 +131,8 @@ fi
 #    - Deployer: criar versões do App Engine
 #    - Deployer: atuar como a Appspot SA (actAs)
 # =========================
-
-echo "Concedendo papéis mínimos no projeto..."
+echo
+echo ">>>>>> PASSO 3: Concedendo papéis mínimos no projeto..."
 
 # (3.1) Cloud Build SA pode criar builds
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
@@ -110,13 +165,16 @@ gcloud iam service-accounts enable "$APPSPOT_SA" --project "$PROJECT_ID" || true
 # =========================
 # 4) Permissões no BUCKET DE STAGING (apenas o necessário)
 # =========================
-echo "Ajustando IAM do bucket de staging..."
+echo
+echo ">>>>>> PASSO 4: Ajustando IAM do bucket de staging $STAGING_BUCKET..."
 gsutil iam ch "serviceAccount:${CB_SA}:roles/storage.objectAdmin"   "gs://${STAGING_BUCKET}"
 gsutil iam ch "serviceAccount:${APPSPOT_SA}:roles/storage.objectAdmin" "gs://${STAGING_BUCKET}"
 
 # =========================
 # 5) Cloud Logging (quem escreve logs)
 # =========================
+echo
+echo ">>>>>> PASSO 5: Passando acesso a escrita de logs..."
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${APPSPOT_SA}" \
   --role="roles/logging.logWriter" >/dev/null
@@ -130,6 +188,8 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 #    Necessário: upload + download (writer) para quem roda o build.
 # =========================
 # Writer para Appspot SA (alguns pipelines de AE rodam como ela)
+echo
+echo ">>>>>> PASSO 6: Passando acesso ao ArtifactRegistry" 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:${APPSPOT_SA}" \
   --role="roles/artifactregistry.writer" >/dev/null
@@ -142,17 +202,37 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 # (Opcional) Listar repositórios na região US (o cache padrão usa us.gcr.io)
 gcloud artifacts repositories list --location=us --project "$PROJECT_ID" >/dev/null 2>&1 || true
 
+# =========================
+# 7) Secret Manager (criar se faltar, garantir 1ª versão e IAM)
+# =========================
+echo
+echo ">>>>>> PASSO 7: Verificando secret BITRIX_TOKEN..."
+
+if ! gcloud secrets describe BITRIX_TOKEN --project "$PROJECT_ID" >/dev/null 2>&1; then
+  echo "Criando secret BITRIX_TOKEN..."
+  gcloud secrets create BITRIX_TOKEN \
+    --project "$PROJECT_ID" \
+    --replication-policy="automatic"
+else
+  echo "Secret BITRIX_TOKEN já existe."
+fi
+
+# IAM bindings (App Engine e Cloud Build SAs)
 gcloud secrets add-iam-policy-binding BITRIX_TOKEN \
   --project "$PROJECT_ID" \
   --member="serviceAccount:${APPSPOT_SA}" \
   --role="roles/secretmanager.secretAccessor"
 
+gcloud secrets add-iam-policy-binding BITRIX_TOKEN \
+  --project "$PROJECT_ID" \
+  --member="serviceAccount:${CB_SA}" \
+  --role="roles/secretmanager.secretAccessor" || true
+
 echo
-echo "✅ Pronto. Permissões iniciais aplicadas:"
+echo "✅ Permissões iniciais aplicadas:"
 echo "- Cloud Build SA: cloudbuild.builds.editor + logging.logWriter + artifactregistry.writer (projeto)"
 echo "- Deployer: appengine.deployer (projeto) + iam.serviceAccountUser sobre ${APPSPOT_SA}"
 echo "- Appspot SA: storage.objectAdmin (staging bucket) + logging.logWriter + artifactregistry.writer"
 echo "- Bucket de staging criado/ajustado em região compatível com o App Engine"
 echo
 echo "Agora rode: gcloud app deploy --project ${PROJECT_ID} --verbosity=debug"
-read -p "Tecle ENTER para fechar."
