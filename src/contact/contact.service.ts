@@ -17,7 +17,7 @@ export class ContactService {
   async ONCRMCONTACTUSERFIELDUPDATE(eventData, contactData): Promise<void> {}
   async ONCRMCONTACTUSERFIELDADD(eventData, contactData): Promise<void> {}
   async ONCRMCONTACTDELETE(eventData, contactData): Promise<void> {
-    const id = data.data.FIELDS.ID;
+    const id = eventData.data.FIELDS.ID;
 
     await this.closeAllChats({ id });
   }

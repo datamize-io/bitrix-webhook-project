@@ -11,7 +11,7 @@ export class AppController {
     return await this.appService.getHello();
   }
 
-  @Post('datamize/webhooks/')
+  @Post('webhooks/')
   async webhookHandler(@Body() body: any, @Res() res: Response) {
     await this.appService.filterWebhookEvent(body);
 
