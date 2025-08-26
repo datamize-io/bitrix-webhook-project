@@ -46,10 +46,19 @@ trap on_exit EXIT
 # =========================
 # CONFIG
 # =========================
-read -rsp "Informe o valor para o ID do projeto: " _project
-PROJECT_ID="$_project"
+echo "Iniciando a configuração"
+# Carregar variáveis do .env se existir
+if [[ -f .env ]]; then
+  set -a   # equivalente curto para "allexport"
+  source .env
+  set +a
+fi
 
-read -r -p "Tecle ENTER para iniciar a instalação do projeto $PROJECT_ID"
+echo "Variáveis de ambiente carregadas...."
+# Pega do .env a variável GOOGLE_CLOUD_PROJECT
+PROJECT_ID="${GOOGLE_CLOUD_PROJECT:?Variável GOOGLE_CLOUD_PROJECT não encontrada no .env}"
+
+echo "Usando projeto: $PROJECT_ID"
 gcloud config set project "$PROJECT_ID"
 
 # Região do App Engine (se precisar criar)
@@ -74,14 +83,6 @@ echo "Cloud Build SA: $CB_SA"
 echo "Staging bucket: gs://$STAGING_BUCKET"
 echo
 
-echo
-echo ">>>>>> PASSO 4: Ajustando IAM do bucket de staging $STAGING_BUCKET..."
-gsutil iam ch "serviceAccount:${CB_SA}:roles/storage.objectAdmin"   "gs://${STAGING_BUCKET}"
-gsutil iam ch "serviceAccount:${APPSPOT_SA}:roles/storage.objectAdmin" "gs://${STAGING_BUCKET}"
-gsutil iam ch "serviceAccount:${CB_SA}:roles/storage.admin" "gs://${STAGING_BUCKET}"
-gsutil iam ch "serviceAccount:${APPSPOT_SA}:roles/storage.admin" "gs://${STAGING_BUCKET}"
-
-read -p "Tecla"
 # =========================
 # 0) Habilitar APIs (idempotente)
 # =========================
@@ -92,7 +93,11 @@ gcloud services enable \
   storage.googleapis.com \
   logging.googleapis.com \
   artifactregistry.googleapis.com \
+  secretmanager.googleapis.com \
   --project "$PROJECT_ID"
+
+# (Opcional mas recomendado se você usa Secrets abaixo)
+# gcloud services enable secretmanager.googleapis.com --project "$PROJECT_ID"
 
 # =========================
 # 1) Garantir App Engine app
@@ -110,7 +115,7 @@ fi
 #    (gcloud usa 'staging.<project>.appspot.com')
 # =========================
 echo
-if ! gsutil ls -b "gs://${STAGING_BUCKET}" >/dev/null 2>&1; then
+if ! gcloud storage buckets describe "gs://${STAGING_BUCKET}" >/dev/null 2>&1; then
   AE_LOC="$(gcloud app describe --project "$PROJECT_ID" --format='value(locationId)')"
   case "$AE_LOC" in
     us-central)           BUCKET_LOC="us-central1" ;;
@@ -120,7 +125,10 @@ if ! gsutil ls -b "gs://${STAGING_BUCKET}" >/dev/null 2>&1; then
     *)                    BUCKET_LOC="$AE_LOC" ;;
   esac
   echo ">>>>>> PASSO 2: Criando bucket de staging em $BUCKET_LOC..."
-  gsutil mb -p "$PROJECT_ID" -l "$BUCKET_LOC" -b on "gs://${STAGING_BUCKET}"
+  gcloud storage buckets create "gs://${STAGING_BUCKET}" \
+    --project="$PROJECT_ID" \
+    --location="$BUCKET_LOC" \
+    --uniform-bucket-level-access
 else
   echo ">>>>>> PASSO 2: Bucket de staging já existe."
 fi
@@ -167,8 +175,13 @@ gcloud iam service-accounts enable "$APPSPOT_SA" --project "$PROJECT_ID" || true
 # =========================
 echo
 echo ">>>>>> PASSO 4: Ajustando IAM do bucket de staging $STAGING_BUCKET..."
-gsutil iam ch "serviceAccount:${CB_SA}:roles/storage.objectAdmin"   "gs://${STAGING_BUCKET}"
-gsutil iam ch "serviceAccount:${APPSPOT_SA}:roles/storage.objectAdmin" "gs://${STAGING_BUCKET}"
+gcloud storage buckets add-iam-policy-binding "gs://${STAGING_BUCKET}" \
+  --member="serviceAccount:${CB_SA}" \
+  --role="roles/storage.admin"
+
+gcloud storage buckets add-iam-policy-binding "gs://${STAGING_BUCKET}" \
+  --member="serviceAccount:${APPSPOT_SA}" \
+  --role="roles/storage.admin"
 
 # =========================
 # 5) Cloud Logging (quem escreve logs)

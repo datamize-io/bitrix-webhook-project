@@ -16,15 +16,28 @@ export class ContactService {
   async ONCRMCONTACTUSERFIELDDELETE(eventData, contactData): Promise<void> {}
   async ONCRMCONTACTUSERFIELDUPDATE(eventData, contactData): Promise<void> {}
   async ONCRMCONTACTUSERFIELDADD(eventData, contactData): Promise<void> {}
+  async ONCRMCONTACTUPDATE(eventData, contactData): Promise<void> {}
   async ONCRMCONTACTDELETE(eventData, contactData): Promise<void> {
     const id = eventData.data.FIELDS.ID;
 
     await this.closeAllChats({ id });
   }
-  async ONCRMCONTACTUPDATE(eventData, contactData): Promise<void> {}
+
   async ONCRMCONTACTADD(eventData, contactData): Promise<void> {
     await this.mergeIfContactHasDuplicates(contactData);
     await this.setAllFormatsOfPhoneNumber(contactData);
+  }
+
+  async closeAllChats(contactData: { id: number }) {
+    const contactChats = await new OpenLineChat(this.bitrix).getChatsByEntityId(
+      'contact',
+      Number(contactData.id),
+    );
+
+    contactChats.getData().forEach(async (chat) => {
+      const operator = new OpenLineOperator(this.bitrix).finishChat(chat.getData().CHAT_ID);
+    });
+    console.log(`>>> Todos os chats do negócio foram encerrados.`);
   }
 
   async mergeIfContactHasDuplicates(contactData: any): Promise<number> {
@@ -36,7 +49,7 @@ export class ContactService {
     const olderContactId = duplicates.pop();
 
     for (const contactId of duplicates) {
-      const item = await new Item(this.bitrix).setEntityTypeId(3);
+      const item = await new Contact(this.bitrix);
       const duplicatedContact = await item.get(contactId);
       await duplicatedContact.transferAllActivitiesTo(olderContactId);
       await duplicatedContact.transferAllCommentsTo(olderContactId);
@@ -57,18 +70,6 @@ export class ContactService {
     return olderContactId || contactData.id;
   }
 
-  async closeAllChats(contactData: { id: number }) {
-    const contactChats = await new OpenLineChat(this.bitrix).getChatsByEntityId(
-      'contact',
-      Number(contactData.id),
-    );
-
-    contactChats.getData().forEach(async (chat) => {
-      const operator = new OpenLineOperator(this.bitrix).finishChat(chat.getData().CHAT_ID);
-    });
-    console.log(`>>> Todos os chats do negócio foram encerrados.`);
-  }
-
   async setAllFormatsOfPhoneNumber(contactData) {
     if (!contactData.phone) return 'Não possui telefone cadastrado.';
 
@@ -77,7 +78,7 @@ export class ContactService {
       .filter((fieldMultiple) => fieldMultiple.typeId == 'PHONE')
       .map((contactPhone) => contactPhone.value);
 
-    const phoneVariations = HelperService.getAllVariationsOfSamePhones(['4784646202']).filter(
+    const phoneVariations = HelperService.getAllVariationsOfSamePhones(allPhones).filter(
       (phone) => !allPhones.includes(phone),
     );
 
