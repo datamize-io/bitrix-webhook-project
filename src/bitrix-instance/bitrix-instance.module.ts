@@ -6,6 +6,7 @@ import { ActivityService } from '../activity/activity.service.js';
 import { ContactService } from '../contact/contact.service.js';
 import { LeadService } from '../lead/lead.service.js';
 import { BitrixWebhookService } from '../bitrix-webhook/bitrix-webhook.service.js';
+import { DefaultService } from '../default/default.service.js';
 
 @Global() // opcional: torne disponível app-wide sem precisar importar sempre
 @Module({
@@ -15,18 +16,10 @@ import { BitrixWebhookService } from '../bitrix-webhook/bitrix-webhook.service.j
       provide: BitrixInstance,
       useExisting: BITRIX_INSTANCE,
     },
-    ActivityService,
-    ContactService,
-    LeadService,
-    BitrixWebhookService,
   ],
   exports: [
     BITRIX_INSTANCE, // token (caso queira usar com @Inject)
     BitrixInstance, // alias por tipo (injeção direta)
-    ActivityService,
-    ContactService,
-    LeadService,
-    BitrixWebhookService,
     ...BitrixProviders, // exporta também, se quiser reusar o SM client
   ],
 })

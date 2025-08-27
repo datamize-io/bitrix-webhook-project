@@ -37,9 +37,13 @@ export class BitrixWebhookService {
     const entity = await this.getEntityByEvent(eventData);
     services.forEach((service) => {
       console.log(
-        `Evento ${eventData.event}\nEntidade:${entity.constructor.name}\nServiço: ${service.constructor.name}`,
+        `Evento ${eventData.event}\nEntidade:${entity.constructor?.name}\nServiço: ${service.constructor.name}`,
       );
-      service[eventData.event](eventData, entity?.getData());
+      service[eventData.event](eventData, entity?.getData()).then((response) => {
+        if (response) {
+          console.log(`Resposta de ${eventData.event}: ${response}`);
+        }
+      });
     });
   }
 
