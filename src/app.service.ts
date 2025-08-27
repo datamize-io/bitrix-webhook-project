@@ -24,10 +24,10 @@ export class AppService {
 
   async getExample(): Promise<string> {
     this.filterWebhookEvent({
-      event: 'ONCRMDEALADD',
-      event_handler_id: '243',
-      data: { FIELDS: { ID: '9640', ENTITY_TYPE_ID: 1104 } },
-      ts: '1755016010',
+      event: 'ONCRMCONTACTADD',
+      event_handler_id: '515',
+      data: { FIELDS: { ID: '153' } },
+      ts: '1756285430',
       auth: {
         domain: 'xxxxx.bitrix24.com.br',
         client_endpoint: 'https://xxxxx.bitrix24.com.br/rest/',

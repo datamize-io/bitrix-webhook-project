@@ -9,7 +9,7 @@ export class DealService {
     private readonly defaultService: DefaultService,
   ) {}
 
-  async ONCRMDEALADD(eventData: any, dealData: any): Promise<void> {
+  async ONCRMDEALADD(eventData: any, dealData: any): Promise<any> {
     await this.startNewChatWhenDealIsCreated(dealData);
   }
 

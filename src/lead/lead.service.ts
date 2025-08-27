@@ -15,7 +15,7 @@ export class LeadService {
     private readonly defaultService: DefaultService,
   ) {}
 
-  async ONCRMLEADUPDATE(data, leadData): Promise<void> {
+  async ONCRMLEADUPDATE(data, leadData): Promise<any> {
     await this.closeChatOnCloseLead(leadData);
   }
 

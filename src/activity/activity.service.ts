@@ -4,7 +4,7 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class ActivityService {
   constructor(private readonly bitrix: BitrixInstance) {}
-  async ONCRMACTIVITYDELETE(eventData, activityData): Promise<void> {}
-  async ONCRMACTIVITYUPDATE(eventData, activityData): Promise<void> {}
-  async ONCRMACTIVITYADD(eventData, activityData): Promise<void> {}
+  async ONCRMACTIVITYDELETE(eventData, activityData): Promise<any> {}
+  async ONCRMACTIVITYUPDATE(eventData, activityData): Promise<any> {}
+  async ONCRMACTIVITYADD(eventData, activityData): Promise<any> {}
 }

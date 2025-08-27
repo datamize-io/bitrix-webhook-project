@@ -1,5 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { Activity, BitrixInstance, Calendar, Deal, Lead } from '@datamize-io/bitrix-lib-node';
+import {
+  Activity,
+  BitrixInstance,
+  Calendar,
+  Contact,
+  ContactField,
+  Deal,
+  Lead,
+} from '@datamize-io/bitrix-lib-node';
 
 type EventData = {
   event: string;
@@ -22,6 +30,13 @@ export class BitrixWebhookService {
     ONCRMDEALDELETE: Deal,
     ONCRMDEALUPDATE: Deal,
     ONCRMDEALADD: Deal,
+    ONCRMCONTACTUSERFIELDSETENUMVALUES: ContactField,
+    ONCRMCONTACTUSERFIELDDELETE: ContactField,
+    ONCRMCONTACTUSERFIELDUPDATE: ContactField,
+    ONCRMCONTACTUSERFIELDADD: ContactField,
+    ONCRMCONTACTDELETE: Contact,
+    ONCRMCONTACTUPDATE: Contact,
+    ONCRMCONTACTADD: Contact,
   };
 
   constructor(private readonly bitrix: BitrixInstance) {}
@@ -37,7 +52,7 @@ export class BitrixWebhookService {
     const entity = await this.getEntityByEvent(eventData);
     services.forEach((service) => {
       console.log(
-        `Evento ${eventData.event}\nEntidade:${entity.constructor?.name}\nServiço: ${service.constructor.name}`,
+        `Evento: ${service.constructor.name}.${eventData.event}\nEntidade:${entity?.constructor?.name}`,
       );
       service[eventData.event](eventData, entity?.getData()).then((response) => {
         if (response) {
@@ -51,7 +66,7 @@ export class BitrixWebhookService {
     const entity: any = this.eventsEntities[eventData.event];
     if (!entity) return undefined;
 
-    const commonGets = ['Activity', 'Calendar', 'Deal', 'Lead'];
+    const commonGets = ['Activity', 'Calendar', 'Deal', 'Lead', 'Contact'];
     if (commonGets.includes(entity.name)) {
       try {
         return new entity(this.bitrix).get(eventData.data.FIELDS.ID);

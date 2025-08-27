@@ -91,8 +91,9 @@ export class DefaultService {
     console.log(`>>> Todos os chats do negócio foram encerrados.`);
   }
 
-  async mergeIfContactHasDuplicates(contactData: any): Promise<number> {
-    const contact = await new Contact(this.bitrix).patch(contactData, null);
+  async mergeIfContactHasDuplicates(contactData: any): Promise<any> {
+    let contact = await new Contact(this.bitrix).patch(contactData, null);
+    let wasMerged = false;
 
     const duplicates = await contact.getDuplications();
     console.log(`Duplicatas encontradas:`, duplicates.length);
@@ -100,6 +101,7 @@ export class DefaultService {
     const olderContactId = duplicates.pop();
 
     for (const contactId of duplicates) {
+      wasMerged = true;
       const item = await new Contact(this.bitrix);
       const duplicatedContact = await item.get(contactId);
       await duplicatedContact.transferAllActivitiesTo(olderContactId);
@@ -108,7 +110,9 @@ export class DefaultService {
       await duplicatedContact.transferAllFieldsTo(olderContactId);
       await duplicatedContact.clearAllFieldsOfItem();
       await duplicatedContact.delete(contactId);
-      await item
+      console.log(`>> Contato ${contactId} deletado por duplicação.`);
+
+      await new Contact(this.bitrix)
         .setId(olderContactId)
         .addTimelineLogEntry(
           `Mesclagem recebida`,
@@ -116,9 +120,14 @@ export class DefaultService {
         );
     }
 
+    if (olderContactId !== contactData.id) {
+      contact = await new Contact(this.bitrix).get(olderContactId);
+      contactData = contact.getData();
+    }
+
     console.log(`Duplicações corrigidas, contato mais antigo ${olderContactId || contactData.id}.`);
 
-    return olderContactId || contactData.id;
+    return contactData;
   }
 
   async setAllFormatsOfPhoneNumberOnContact(contactData) {

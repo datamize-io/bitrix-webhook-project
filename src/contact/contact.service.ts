@@ -16,27 +16,35 @@ export class ContactService {
     private readonly defaultService: DefaultService,
   ) {}
 
-  async ONCRMCONTACTUSERFIELDSETENUMVALUES(eventData, contactData): Promise<void> {}
-  async ONCRMCONTACTUSERFIELDDELETE(eventData, contactData): Promise<void> {}
-  async ONCRMCONTACTUSERFIELDUPDATE(eventData, contactData): Promise<void> {}
-  async ONCRMCONTACTUSERFIELDADD(eventData, contactData): Promise<void> {}
-  async ONCRMCONTACTUPDATE(eventData, contactData): Promise<void> {}
-  async ONCRMCONTACTDELETE(eventData, contactData): Promise<void> {
+  async ONCRMCONTACTUSERFIELDSETENUMVALUES(eventData, contactData): Promise<any> {}
+  async ONCRMCONTACTUSERFIELDDELETE(eventData, contactData): Promise<any> {}
+  async ONCRMCONTACTUSERFIELDUPDATE(eventData, contactData): Promise<any> {}
+  async ONCRMCONTACTUSERFIELDADD(eventData, contactData): Promise<any> {}
+  async ONCRMCONTACTUPDATE(eventData, contactData): Promise<any> {}
+  async ONCRMCONTACTDELETE(eventData, contactData): Promise<any> {
     const id = eventData.data.FIELDS.ID;
 
     await this.closeAllContactChats({ id });
   }
 
-  async ONCRMCONTACTADD(eventData, contactData): Promise<void> {
-    await await this.mergeIfContactHasDuplicates(contactData);
-    await await this.setAllFormatsOfPhoneNumberOnContact(contactData);
+  async ONCRMCONTACTADD(eventData, contactData): Promise<any> {
+    console.log(eventData);
+    if (!contactData) {
+      return `Os dados da entidade não foram passadas para ${this.constructor.name}.${eventData.event}(eventData,entityData)`;
+    }
+    const newContactData = await this.mergeIfContactHasDuplicates(contactData);
+
+    // Se não sofrer alterações no merge
+    if (newContactData.id == contactData.id) {
+      await this.setAllFormatsOfPhoneNumberOnContact(contactData);
+    }
   }
 
   async closeAllContactChats(contactData: { id: number }) {
     return await this.defaultService.closeAllContactChats(contactData);
   }
 
-  async mergeIfContactHasDuplicates(contactData: any): Promise<number> {
+  async mergeIfContactHasDuplicates(contactData: any): Promise<any> {
     return await this.defaultService.mergeIfContactHasDuplicates(contactData);
   }
 
