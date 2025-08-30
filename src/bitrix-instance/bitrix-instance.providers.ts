@@ -22,7 +22,7 @@ export const BitrixProviders: Provider[] = [
       // envs obrigatórias
       const webhookUrl = process.env.BITRIX_WEBHOOK_URL;
       const userIdStr = process.env.BITRIX_WEBHOOK_USER_ID;
-      const logInstance = Boolean(process.env.LOG_BITRIX_LIB) || false;
+      const logInstance = process.env.LOG_BITRIX_LIB?.toLowerCase() == 'true' || false;
 
       if (!webhookUrl) throw new Error('[Config] BITRIX_WEBHOOK_URL ausente');
       const userId = parseInt(userIdStr ?? '', 10);

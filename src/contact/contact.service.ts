@@ -41,7 +41,7 @@ export class ContactService {
   }
 
   async closeAllContactChats(contactData: { id: number }) {
-    return await this.defaultService.closeAllContactChats(contactData);
+    return await this.defaultService.closeAllChatsOfEntity(contactData, 'contact');
   }
 
   async mergeIfContactHasDuplicates(contactData: any): Promise<any> {

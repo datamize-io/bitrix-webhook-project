@@ -18,22 +18,40 @@ export class DefaultService {
     console.log(`DealId: ${dealData.id}`);
 
     let chatId;
-    try {
-      const dealChat = await new OpenLineChat(this.bitrix).getLastChatIdByEntityId(
-        'DEAL',
-        dealData.id,
-      );
-      chatId = dealChat.getData();
-    } catch (error: any) {
+    console.log(`Chat Id: ${chatId}`);
+
+    let contactId = dealData.contactId;
+    if (!contactId) {
       try {
-        const contactChat = await new OpenLineChat(this.bitrix).getLastChatIdByEntityId(
-          'CONTACT',
-          dealData.contactId,
+        console.log(`Buscando vínculo de chat com o contato...`);
+        console.log(
+          `Contato ainda não está vinculado ao negócio, tentando por lead ${dealData.leadId}...`,
         );
-        chatId = contactChat.getData();
+        if (dealData.leadId) {
+          const lead = await new Lead(this.bitrix).get(dealData.leadId);
+          contactId = lead.getData().contactId;
+
+          if (contactId) {
+            const deal = new Deal(this.bitrix).patch(dealData);
+            deal.update({
+              id: dealData.id,
+              fields: {
+                contactId: contactId,
+              },
+            });
+          }
+        }
       } catch (error: any) {
         console.log(error);
       }
+    }
+
+    if (contactId) {
+      const contactChat = await new OpenLineChat(this.bitrix).getLastChatIdByEntityId(
+        'CONTACT',
+        contactId,
+      );
+      chatId = contactChat.getData();
     }
 
     if (chatId) {
@@ -61,37 +79,51 @@ export class DefaultService {
     if (!leadStatus) return `Lead não possui status de semantica`;
     if (leadStatus == 'P') return 'Lead está aberto ainda.';
     console.log(`LeadId: ${leadData.id}`);
-    console.log(leadData);
+    console.log(`Fechando os chats após encerrar lead.`);
     const chats = await new OpenLineChat(this.bitrix).getChatsByEntityId(
       'lead',
       Number(leadData.id),
-      'Y',
+      'N',
     );
 
     chats.getData().forEach(async (chat) => {
       const chatId = chat.CHAT_ID;
-      new OpenLineOperator(this.bitrix).finishChat(chatId).then((value) => {
-        console.log(`Encerrado chat do lead. (${value})`);
+      try {
+        await new OpenLineOperator(this.bitrix).finishChat(chatId);
+      } catch (error: any) {
+        if (!error.message.includes('NOT_LOAD_SESSION_OR_CHAT')) {
+          console.log('Erro na tentativa de fechar chat: ', error.message);
+        }
+      } finally {
         new Lead(this.bitrix)
           .setId(leadData.id)
-          .addTimelineLogEntry('Chat encerrado', 'Chat foi encerrado pois lead foi concluído.');
-      });
+          .addTimelineLogEntry(
+            'Chat encerrado',
+            `Chat ${chatId} foi encerrado pois lead foi concluído.`,
+          );
+      }
     });
+
+    console.log(`Todos os chats encerrados com sucesso!`);
   }
 
-  async closeAllContactChats(contactData: { id: number }) {
+  async closeAllChatsOfEntity(
+    contactData: { id: number },
+    entityName: 'lead' | 'deal' | 'lead' | 'company' | 'contact' = 'contact',
+  ) {
     const contactChats = await new OpenLineChat(this.bitrix).getChatsByEntityId(
-      'contact',
+      entityName,
       Number(contactData.id),
     );
 
     contactChats.getData().forEach(async (chat) => {
-      const operator = new OpenLineOperator(this.bitrix).finishChat(chat.getData().CHAT_ID);
+      console.log(chat);
+      const operator = new OpenLineOperator(this.bitrix).finishChat(chat.CHAT_ID);
     });
     console.log(`>>> Todos os chats do negócio foram encerrados.`);
   }
 
-  async mergeIfContactHasDuplicates(contactData: any): Promise<any> {
+  async mergeIfContactHasDuplicates(contactData: any): Promise<number> {
     let contact = await new Contact(this.bitrix).patch(contactData, null);
     let wasMerged = false;
 

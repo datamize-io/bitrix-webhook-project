@@ -15,8 +15,14 @@ export class LeadService {
     private readonly defaultService: DefaultService,
   ) {}
 
-  async ONCRMLEADUPDATE(data, leadData): Promise<any> {
+  async ONCRMLEADUPDATE(eventData, leadData): Promise<any> {
     await this.closeChatOnCloseLead(leadData);
+  }
+
+  async ONCRMLEADDELETE(eventData, leadData): Promise<any> {
+    const id = eventData.data.FIELDS.ID;
+
+    await this.defaultService.closeAllChatsOfEntity({ id: id }, 'lead');
   }
 
   async closeChatOnCloseLead(leadData) {

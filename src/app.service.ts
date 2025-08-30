@@ -25,16 +25,7 @@ export class AppService {
   async getExample(): Promise<string> {
     this.filterWebhookEvent({
       event: 'ONCRMCONTACTADD',
-      event_handler_id: '515',
       data: { FIELDS: { ID: '153' } },
-      ts: '1756285430',
-      auth: {
-        domain: 'xxxxx.bitrix24.com.br',
-        client_endpoint: 'https://xxxxx.bitrix24.com.br/rest/',
-        server_endpoint: 'https://oauth.bitrix.info/rest/',
-        member_id: 'xxxxxxx',
-        application_token: 'xxxxxx',
-      },
     });
 
     return `Testando`;

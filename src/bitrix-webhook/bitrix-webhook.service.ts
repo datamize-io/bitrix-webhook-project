@@ -49,7 +49,13 @@ export class BitrixWebhookService {
   }
 
   async processServiceEvents(services: any[], eventData: EventData) {
-    const entity = await this.getEntityByEvent(eventData);
+    const isDeleteEvent = eventData.event.includes('DELETE');
+    let entity;
+
+    if (!isDeleteEvent) {
+      entity = await this.getEntityByEvent(eventData);
+    }
+
     services.forEach((service) => {
       console.log(
         `Evento: ${service.constructor.name}.${eventData.event}\nEntidade:${entity?.constructor?.name}`,
